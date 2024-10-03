@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'administration du Portfolio</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          line-height: 1.6;
+          margin: 0;
+          padding: 20px;
+          background-color: #f4f4f4;
+        }
+        .container {
+          max-width: 800px;
+          margin: auto;
+          background: white;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+          color: #333;
+        }
+        form {
+          margin-bottom: 20px;
+        }
+        label {
+          display: block;
+          margin-bottom: 5px;
+        }
+        input[type="text"], input[type="url"], input[type="file"] {
+          width: 100%;
+          padding: 8px;
+          margin-bottom: 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+        }
+        button {
+          background-color: #3498db;
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        button:hover {
+          background-color: #2980b9;
+        }
+        .project-list {
+          list-style-type: none;
+          padding: 0;
+        }
+        .project-item {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          padding: 10px;
+          margin-bottom: 10px;
+          border-radius: 4px;
+        }
+
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+      </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Administration du Portfolio</h1>
+    
+    <h2>Changer la photo de profil</h2>
+    <form id="profilePhotoForm">
+        <label for="profilePhoto">Nouvelle photo de profil:</label>
+        <input type="file" id="profilePhoto" accept="image/*" required>
+        <button type="submit">Mettre à jour la photo</button>
+    </form>
+    
+    <h2>Ajouter un nouveau projet</h2>
+    <form id="addProjectForm">
+        <label for="projectTitle">Titre du projet:</label>
+        <input type="text" id="projectTitle" required>
+        
+        <label for="projectPhoto">Photo du projet:</label>
+        <input type="file" id="projectPhoto" accept="image/*" required>
+        
+        <label for="projectGithub">Lien GitHub:</label>
+        <input type="url" id="projectGithub" required>
+        
+        <button type="submit">Ajouter le projet</button>
+    </form>
+    
+    <h2>Ajouter une nouvelle expérience</h2>
+    <form id="addExperienceForm">
+        <label for="experienceTitle">Titre du poste:</label>
+        <input type="text" id="experienceTitle" required>
+        
+        <label for="experienceCompany">Entreprise:</label>
+        <input type="text" id="experienceCompany" required>
+        
+        <label for="experienceStartDate">Date de début:</label>
+        <input type="date" id="experienceStartDate" required>
+        
+        <label for="experienceEndDate">Date de fin:</label>
+        <input type="date" id="experienceEndDate">
+        
+        <label for="experienceDescription">Description:</label>
+        <textarea id="experienceDescription" required></textarea>
+        
+        <button type="submit">Ajouter l'expérience</button>
+    </form>
+    
+    <h2>Ajouter une nouvelle compétence</h2>
+    <form id="addSkillForm">
+        <label for="skillName">Nom de la compétence:</label>
+        <input type="text" id="skillName" required>
+        
+        <button type="submit">Ajouter la compétence</button>
+    </form>
+    
+    <h2>Projets existants</h2>
+    <ul class="project-list" id="projectList">
+        <!-- Les projets seront ajoutés ici dynamiquement -->
+    </ul>
+
+    <h2>Expériences existantes</h2>
+    <ul class="experience-list" id="experienceList">
+        <!-- Les expériences seront ajoutées ici dynamiquement -->
+    </ul>
+
+    <h2>Compétences existantes</h2>
+    <ul class="skill-list" id="skillList">
+        <!-- Les compétences seront ajoutées ici dynamiquement -->
+    </ul>
+</div>
+
+    <script>
+        // Fonction pour envoyer une requête au serveur
+        async function sendRequest(url, method, data) {
+            const response = await fetch(url, {
+                method: method,
+                body: data,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            return await response.json();
+        }
+
+        // Gestion du formulaire de photo de profil
+        document.getElementById('profilePhotoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('photo', document.getElementById('profilePhoto').files[0]);
+            
+            const result = await sendRequest('/admin/update_profile', 'POST', formData);
+            if (result.success) {
+                alert('Photo de profil mise à jour avec succès');
+            } else {
+                alert('Erreur lors de la mise à jour de la photo de profil');
+            }
+        });
+
+        // Gestion du formulaire d'ajout de projet
+        document.getElementById('addProjectForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('projectTitle').value);
+            formData.append('photo', document.getElementById('projectPhoto').files[0]);
+            formData.append('github', document.getElementById('projectGithub').value);
+            
+            const result = await sendRequest('/admin/add_project', 'POST', formData);
+            if (result.success) {
+                alert('Projet ajouté avec succès');
+                // Ajouter le projet à la liste
+                addProjectToList(result.project);
+                this.reset();
+            } else {
+                alert("erreur lors de l'ajout du projet");
+            }
+        });
+
+         // Fonction pour ajouter un projet à la liste avec le bouton de suppression
+        function addProjectToList(project) {
+            const projectList = document.getElementById('projectList');
+            const projectItem = document.createElement('li');
+            projectItem.className = 'project-item';
+            projectItem.innerHTML = `
+                <h3>${project.title}</h3>
+                <p>Photo: ${project.photo}</p>
+                <p>GitHub: <a href="${project.github}" target="_blank">${project.github}</a></p>
+                <button class="delete-btn" onclick="deleteProject(${project.id})">Supprimer</button>
+            `;
+            projectList.appendChild(projectItem);
+        }
+
+        // Fonction pour charger les projets existants
+        async function loadProjects() {
+            const projects = await sendRequest('/admin/get_projects', 'GET');
+            projects.forEach(addProjectToList);
+        }
+
+            // Fonction pour supprimer un projet
+        async function deleteProject(projectId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) {
+                const formData = new FormData();
+                formData.append('id', projectId);
+
+                const result = await sendRequest('/admin/delete_project', 'POST', formData);
+                if (result.success) {
+                    alert('Projet supprimé avec succès');
+                    // Mettre à jour la liste des projets
+                    document.getElementById('projectList').innerHTML = '';
+                    loadProjects();
+                } else {
+                    alert('Erreur lors de la suppression du projet');
+                }
+            }
+        }
+
+        // Même chose pour les expériences
+        function addExperienceToList(experience) {
+            const experienceList = document.getElementById('experienceList');
+            const experienceItem = document.createElement('li');
+            experienceItem.className = 'experience-item';
+            experienceItem.innerHTML = `
+                <h3>${experience.title}</h3>
+                <p>${experience.company}</p>
+                <p>${experience.start_date} - ${experience.end_date || 'Présent'}</p>
+                <p>${experience.description}</p>
+                <button class="delete-btn" onclick="deleteExperience(${experience.id})">Supprimer</button>
+            `;
+            experienceList.appendChild(experienceItem);
+        }
+
+        async function loadExperiences() {
+            const experiences = await sendRequest('/admin/get_experiences', 'GET');
+            experiences.forEach(addExperienceToList);
+        }
+
+        async function deleteExperience(experienceId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette expérience ?')) {
+                const formData = new FormData();
+                formData.append('id', experienceId);
+
+                const result = await sendRequest('/admin/delete_experience', 'POST', formData);
+                if (result.success) {
+                    alert('Expérience supprimée avec succès');
+                    // Mettre à jour la liste des expériences
+                    document.getElementById('experienceList').innerHTML = '';
+                    loadExperiences();
+                } else {
+                    alert('Erreur lors de la suppression de l\'expérience');
+                }
+            }
+        }
+
+        // Même chose pour les compétences
+        function addSkillToList(skill) {
+            const skillList = document.getElementById('skillList');
+            const skillItem = document.createElement('li');
+            skillItem.className = 'skill-item';
+            skillItem.innerHTML = `
+                ${skill.name}
+                <button class="delete-btn" onclick="deleteSkill(${skill.id})">Supprimer</button>
+            `;
+            skillList.appendChild(skillItem);
+        }
+
+        async function loadSkills() {
+            const skills = await sendRequest('/admin/get_skills', 'GET');
+            skills.forEach(addSkillToList);
+        }
+
+        async function deleteSkill(skillId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette compétence ?')) {
+                const formData = new FormData();
+                formData.append('id', skillId);
+
+                const result = await sendRequest('/admin/delete_skill', 'POST', formData);
+                if (result.success) {
+                    alert('Compétence supprimée avec succès');
+                    // Mettre à jour la liste des compétences
+                    document.getElementById('skillList').innerHTML = '';
+                    loadSkills();
+                } else {
+                    alert('Erreur lors de la suppression de la compétence');
+                }
+            }
+        }
+
+        // Charger les projets, expériences et compétences au chargement de la page
+        loadProjects();
+        loadExperiences();
+        loadSkills();
+
+
+
+        document.getElementById('addExperienceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('experienceTitle').value);
+            formData.append('company', document.getElementById('experienceCompany').value);
+            formData.append('start_date', document.getElementById('experienceStartDate').value);
+            formData.append('end_date', document.getElementById('experienceEndDate').value);
+            formData.append('description', document.getElementById('experienceDescription').value);
+            
+            const result = await sendRequest('/admin/add_experience', 'POST', formData);
+            if (result.success) {
+                alert('Expérience ajoutée avec succès');
+                addExperienceToList(result.experience);
+                this.reset();
+            } else {
+                alert("Erreur lors de l'ajout de l'expérience");
+            }
+        });
+
+        // Gestion du formulaire d'ajout de compétence
+        document.getElementById('addSkillForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('name', document.getElementById('skillName').value);
+            
+            const result = await sendRequest('/admin/add_skill', 'POST', formData);
+            if (result.success) {
+                alert('Compétence ajoutée avec succès');
+                addSkillToList(result.skill);
+                this.reset();
+            } else {
+                alert("Erreur lors de l'ajout de la compétence");
+            }
+        });
+
+        
+       
+    </script>
+</body>
+</html>
