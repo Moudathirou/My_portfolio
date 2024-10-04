@@ -57,12 +57,51 @@ gsap.from(".timeline-item", {
   ease: "power3.out"
 });
 
-// Gestion du formulaire de contact
-document.getElementById("contact-form").addEventListener("submit", function(e) {
+
+// Fonction pour obtenir le jeton CSRF
+async function getCsrfToken() {
+  try {
+    const response = await fetch('/get-csrf-token');
+    const data = await response.json();
+    return data.csrf_token;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du jeton CSRF:', error);
+    return null;
+  }
+}
+
+// Mise à jour du gestionnaire de formulaire de contact
+document.getElementById("contact-form").addEventListener("submit", async function(e) {
   e.preventDefault();
-  // Ici, vous pouvez ajouter le code pour envoyer le formulaire à votre backend
-  alert("Merci pour votre message ! Je vous répondrai dans les plus brefs délais.");
-  this.reset();
+  const name = this.name.value;
+  const email = this.email.value;
+  const message = this.message.value;
+
+  try {
+    // Obtenir le jeton CSRF
+    const csrfToken = await getCsrfToken();
+    
+    const response = await fetch('/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ name, email, message })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      alert("Merci pour votre message ! Je vous répondrai dans les plus brefs délais.");
+      this.reset();
+    } else {
+      alert("Erreur : " + (result.error || "Impossible d'envoyer le message."));
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert("Une erreur est survenue lors de l'envoi du message. Veuillez réessayer plus tard.");
+  }
 });
 
 // Navigation fluide
